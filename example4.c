@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
      * 1 hidden layer(s) of 4 neurons.
      * 3 outputs (1 per class)
      */
-    genann *ann = genann_init(4, 1, 4, 3);
+    genann *ann = genann_init(4, 200, 4, 3);
 
     int i, j;
     int loops = 5000;

@@ -1,5 +1,5 @@
 CFLAGS = -Wall -Wshadow -O3 -g -march=native
-LDLIBS = -lm
+LDLIBS = -lm -fopenmp
 
 all: check example1 example2 example3 example4
 
