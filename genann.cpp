@@ -24,6 +24,7 @@
  */
 
 #include "genann.h"
+#include "genann_cu.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -40,8 +41,6 @@
 #define genann_act_output genann_act
 #endif
 
-#define LOOKUP_SIZE 4096
-
 double genann_act_hidden_indirect(const struct genann *ann, double a) {
     return ann->activation_hidden(ann, a);
 }
@@ -50,38 +49,8 @@ double genann_act_output_indirect(const struct genann *ann, double a) {
     return ann->activation_output(ann, a);
 }
 
-const double sigmoid_dom_min = -15.0;
-const double sigmoid_dom_max = 15.0;
 double interval;
 double lookup[LOOKUP_SIZE];
-
-#ifdef __GNUC__
-#define likely(x)       __builtin_expect(!!(x), 1)
-#define unlikely(x)     __builtin_expect(!!(x), 0)
-#define unused          __attribute__((unused))
-#else
-#define likely(x)       x
-#define unlikely(x)     x
-#define unused
-#pragma warning(disable : 4996) /* For fscanf */
-#endif
-
-
-double genann_act_sigmoid(const genann *ann unused, double a) {
-    if (a < -45.0) return 0;
-    if (a > 45.0) return 1;
-    return 1.0 / (1 + exp(-a));
-}
-
-void genann_init_sigmoid_lookup(const genann *ann) {
-        const double f = (sigmoid_dom_max - sigmoid_dom_min) / LOOKUP_SIZE;
-        int i;
-
-        interval = LOOKUP_SIZE / (sigmoid_dom_max - sigmoid_dom_min);
-        for (i = 0; i < LOOKUP_SIZE; ++i) {
-            lookup[i] = genann_act_sigmoid(ann, sigmoid_dom_min + f * i);
-        }
-}
 
 double genann_act_sigmoid_cached(const genann *ann unused, double a) {
     assert(!isnan(a));
@@ -120,7 +89,7 @@ genann *genann_init(int inputs, int hidden_layers, int hidden, int outputs) {
 
     /* Allocate extra size for weights, outputs, and deltas. */
     const int size = sizeof(genann) + sizeof(double) * (total_weights + total_neurons + (total_neurons - inputs));
-    genann *ret = malloc(size);
+    genann *ret = (genann*)malloc(size);
     if (!ret) return 0;
 
     ret->inputs = inputs;
@@ -141,7 +110,7 @@ genann *genann_init(int inputs, int hidden_layers, int hidden, int outputs) {
     ret->activation_hidden = genann_act_sigmoid_cached;
     ret->activation_output = genann_act_sigmoid_cached;
 
-    genann_init_sigmoid_lookup(ret);
+    interval = genann_init_sigmoid_lookup(lookup);
 
     return ret;
 }
@@ -178,7 +147,7 @@ genann *genann_read(FILE *in) {
 
 genann *genann_copy(genann const *ann) {
     const int size = sizeof(genann) + sizeof(double) * (ann->total_weights + ann->total_neurons + (ann->total_neurons - ann->inputs));
-    genann *ret = malloc(size);
+    genann *ret = (genann*)malloc(size);
     if (!ret) return 0;
 
     memcpy(ret, ann, size);

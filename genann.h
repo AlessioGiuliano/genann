@@ -33,6 +33,23 @@
 extern "C" {
 #endif
 
+
+#ifdef __GNUC__
+#define likely(x)       __builtin_expect(!!(x), 1)
+#define unlikely(x)     __builtin_expect(!!(x), 0)
+#define unused          __attribute__((unused))
+#else
+#define likely(x)       x
+#define unlikely(x)     x
+#define unused
+#pragma warning(disable : 4996) /* For fscanf */
+#endif
+
+const double sigmoid_dom_min = -15.0;
+const double sigmoid_dom_max = 15.0;
+
+#define LOOKUP_SIZE 4096
+
 #ifndef GENANN_RANDOM
 /* We use the following for uniform random numbers between 0 and 1.
  * If you have a better function, redefine this macro. */
@@ -94,7 +111,6 @@ void genann_train(genann const *ann, double const *inputs, double const *desired
 /* Saves the ann. */
 void genann_write(genann const *ann, FILE *out);
 
-void genann_init_sigmoid_lookup(const genann *ann);
 double genann_act_sigmoid(const genann *ann, double a);
 double genann_act_sigmoid_cached(const genann *ann, double a);
 double genann_act_threshold(const genann *ann, double a);
