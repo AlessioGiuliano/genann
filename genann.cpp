@@ -241,7 +241,6 @@ double const *genann_run(genann const *ann, double const *inputs) {
     i += ann->inputs;
 
     /* Figure hidden layers, if any. */
-// #pragma omp parallel for schedule(static) num_threads(NUM_THREADS)
     for (h = 1; h < ann->hidden_layers; ++h) {
         for (j = 0; j < ann->hidden; ++j) {
             double sum = *w++ * -1.0;
@@ -277,6 +276,7 @@ void set_hidden_deltas(const genann* ann)
 {
     /* Set hidden layer deltas, start on last layer and work backwards. */
     /* Note that loop is skipped in the case of hidden_layers == 0. */
+// #pragma omp parallel for num_threads(NUM_THREADS)
     for (int h = ann->hidden_layers - 1; h >= 0; --h) {
 
         /* Find first output and delta in this layer. */
@@ -284,6 +284,8 @@ void set_hidden_deltas(const genann* ann)
         double *d = ann->delta + (h * ann->hidden);
 
         /* Find first delta in following layer (which may be hidden or output). */
+        // FIXME On ne peut pas faire la boucle externe en paralelle parce qu'on
+        // utilise le layer suivant ici.
         double const * const dd = ann->delta + ((h+1) * ann->hidden);
 
         /* Find first weight in following layer (which may be hidden or output). */
@@ -293,7 +295,8 @@ void set_hidden_deltas(const genann* ann)
 
             double delta = 0;
 
-            for (int k = 0; k < (h == ann->hidden_layers-1 ? ann->outputs : ann->hidden); ++k) {
+            for (int k = 0; k < (h == ann->hidden_layers-1 ? ann->outputs : ann->hidden); ++k)
+            {
                 const double forward_delta = dd[k];
                 const int windex = k * (ann->hidden + 1) + (j + 1);
                 const double forward_weight = ww[windex];
@@ -337,13 +340,14 @@ void train_output(const genann* ann, double learning_rate)
 void train_hidden(const genann* ann, double learning_rate)
 {
     /* Train the hidden layers. */
-#pragma omp parallel for num_threads(NUM_THREADS)
+// #pragma omp parallel for  num_threads(NUM_THREADS)
     for (int h = ann->hidden_layers - 1; h >= 0; --h)
     {
         /* Find first delta in this layer. */
         double const *d = ann->delta + (h * ann->hidden);
 
         /* Find first input to this layer. */
+        // FIXME On utilise le layer precedent ici aussi
         double const *i = ann->output + (h
                 ? (ann->inputs + ann->hidden * (h-1))
                 : 0);
@@ -367,7 +371,7 @@ void genann_train(genann const *ann, double const *inputs, double const *desired
     /* To begin with, we must run the network forward. */
     genann_run(ann, inputs);
 
-    int h, j, k;
+    int j;
 
     /* First set the output layer deltas. */
     {

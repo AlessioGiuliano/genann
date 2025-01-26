@@ -18,13 +18,18 @@ The complexity of the neural network training is approximately O(n × m × l), w
 
 > What are the bottlenecks?
 
-TODO
+After running the `perf` tool, we noticed that we had bottlenecks in
+the training part of the application, more specifically the two functions
+`set_hidden_deltas` (almost half of the samples) and `train_hidden`.
+
+The `genann_run` is also quite heavy, but we will focus on speeding up the
+training in this lab.
+
+![hotspots](./slow_perf.png)
 
 > Which parts of the application do you plan to accelerate and why?
 
-TODO : mettre à jour et compléter
-
-We plan to accelerate all for loops, provided there are no data dependencies. For example, we can not parallelize weight updates because these calculations must be done in the right order.
+We plan to accelerate for loops used in training, provided there are no data dependencies. For example, we can not parallelize weight updates because these calculations must be done in the right order.
 
 > What is theoretically the performance that you could and would like to achieve?
 
