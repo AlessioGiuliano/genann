@@ -1,5 +1,3 @@
 #pragma once
 
-#include "genann.h"
-
-double genann_init_sigmoid_lookup(double* lookup);
+double genann_init_sigmoid_lookup_cuda(double* lookup);

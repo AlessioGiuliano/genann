@@ -24,14 +24,24 @@
  */
 
 #include "genann.h"
+#include <ostream>
+
+#ifdef FAST
 #include "genann_cu.h"
+#define NUM_THREADS omp_get_max_threads()
+#else
+#define NUM_THREADS 1
+#endif
 
 #include <assert.h>
 #include <errno.h>
 #include <math.h>
 #include <stdio.h>
+#include <iostream>
 #include <stdlib.h>
 #include <string.h>
+
+#include <omp.h>
 
 #ifndef genann_act
 #define genann_act_hidden genann_act_hidden_indirect
@@ -51,6 +61,23 @@ double genann_act_output_indirect(const struct genann *ann, double a) {
 
 double interval;
 double lookup[LOOKUP_SIZE];
+
+
+double genann_act_sigmoid(double a) {
+    if (a < -45.0) return 0;
+    if (a > 45.0) return 1;
+    return 1.0 / (1 + exp(-a));
+}
+
+void genann_init_sigmoid_lookup() {
+        const double f = (sigmoid_dom_max - sigmoid_dom_min) / LOOKUP_SIZE;
+        int i;
+
+        interval = LOOKUP_SIZE / (sigmoid_dom_max - sigmoid_dom_min);
+        for (i = 0; i < LOOKUP_SIZE; ++i) {
+            lookup[i] = genann_act_sigmoid(sigmoid_dom_min + f * i);
+        }
+}
 
 double genann_act_sigmoid_cached(const genann *ann unused, double a) {
     assert(!isnan(a));
@@ -75,6 +102,7 @@ double genann_act_threshold(const struct genann *ann unused, double a) {
 }
 
 genann *genann_init(int inputs, int hidden_layers, int hidden, int outputs) {
+    printf("Num threads: %d\n", NUM_THREADS);
     if (hidden_layers < 0) return 0;
     if (inputs < 1) return 0;
     if (outputs < 1) return 0;
@@ -110,7 +138,7 @@ genann *genann_init(int inputs, int hidden_layers, int hidden, int outputs) {
     ret->activation_hidden = genann_act_sigmoid_cached;
     ret->activation_output = genann_act_sigmoid_cached;
 
-    interval = genann_init_sigmoid_lookup(lookup);
+    genann_init_sigmoid_lookup();
 
     return ret;
 }
@@ -213,6 +241,7 @@ double const *genann_run(genann const *ann, double const *inputs) {
     i += ann->inputs;
 
     /* Figure hidden layers, if any. */
+// #pragma omp parallel for schedule(static) num_threads(NUM_THREADS)
     for (h = 1; h < ann->hidden_layers; ++h) {
         for (j = 0; j < ann->hidden; ++j) {
             double sum = *w++ * -1.0;
@@ -308,10 +337,9 @@ void train_output(const genann* ann, double learning_rate)
 void train_hidden(const genann* ann, double learning_rate)
 {
     /* Train the hidden layers. */
-#pragma omp parallel for num_threads(20) schedule(static)
+#pragma omp parallel for num_threads(NUM_THREADS)
     for (int h = ann->hidden_layers - 1; h >= 0; --h)
     {
-
         /* Find first delta in this layer. */
         double const *d = ann->delta + (h * ann->hidden);
 

@@ -1,38 +1,38 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wshadow -O3 -g -march=native
+CXXFLAGS = -fopenmp -std=c++17 -Wall -Wshadow -O3 -g -march=native
 LXXFLAGS = -std=c++17
 LDLIBS = -lm -fopenmp -L ${CUDA_PATH}lib64 -lcuda -lcudart -lstdc++
 
-all: genann_cu.o example1 example2 example3 example4
+# Default target
+all: main_fast main_slow
 
-sigmoid: CFLAGS += -Dgenann_act=genann_act_sigmoid_cached
-sigmoid: CXXFLAGS += -Dgenann_act=genann_act_sigmoid_cached
-sigmoid: all
-
-threshold: CFLAGS += -Dgenann_act=genann_act_threshold
-threshold: CXXFLAGS += -Dgenann_act=genann_act_threshold
-threshold: all
-
-linear: CFLAGS += -Dgenann_act=genann_act_linear
-linear: CXXFLAGS += -Dgenann_act=genann_act_linear
-linear: all
-
-CUDAFLAGS = -arch=sm_60
+# Compile object files
 genann_cu.o: genann.cu
-	nvcc $(CUDAFLAGS) -c genann.cu -o genann_cu.o
+	nvcc -c genann.cu -o genann_cu.o
 
-example1: example1.o genann.o genann_cu.o
+example4.o: example4.cpp
+	$(CXX) $(CXXFLAGS) -c example4.cpp -o example4.o
 
-example2: example2.o genann.o genann_cu.o
+genann.o: genann.cpp
+	$(CXX) $(CXXFLAGS) -c genann.cpp -o genann.o
 
-example3: example3.o genann.o genann_cu.o
+genann_fast.o: genann.cpp
+	$(CXX) $(CXXFLAGS) -c genann.cpp -o genann_fast.o -DFAST
 
-example4: example4.o genann.o genann_cu.o
+# Build main_fast with accelerated definition
+main_fast: example4.o genann_fast.o genann_cu.o
+	$(CXX) $(CXXFLAGS) example4.o genann_fast.o genann_cu.o -o main_fast $(LDLIBS)
 
+# Build main_slow without accelerated definition
+main_slow: example4.o genann.o genann_cu.o
+	$(CXX) $(CXXFLAGS) example4.o genann.o genann_cu.o -o main_slow $(LDLIBS)
 
+# Clean up build files
 clean:
 	$(RM) *.o
-	$(RM) example1 example2 example3 example4 *.exe
+	$(RM) example4 *.exe
+	$(RM) main_fast main_slow *.exe
 	$(RM) persist.txt
 
-.PHONY: sigmoid threshold linear clean
+.PHONY: clean
+

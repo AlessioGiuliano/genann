@@ -1,9 +1,12 @@
+#include <chrono>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
 #include <math.h>
 #include "genann.h"
+
+#include <iostream>
 
 /* This example is to illustrate how to use GENANN.
  * It is NOT an example of good machine learning techniques.
@@ -80,14 +83,15 @@ int main(int argc, char *argv[])
     /* Load the data from file. */
     load_data();
 
+    auto start = std::chrono::system_clock::now();
     /* 4 inputs.
      * 1 hidden layer(s) of 4 neurons.
      * 3 outputs (1 per class)
      */
-    genann *ann = genann_init(4, 2000, 4, 3);
+    genann *ann = genann_init(4, 2000, 10, 3);
 
     int i, j;
-    int loops = 200;
+    int loops = 100;
 
     /* Train the network with backpropagation. */
     printf("Training for %d loops over data.\n", loops);
@@ -106,14 +110,15 @@ int main(int argc, char *argv[])
         else if (_class[j*3+2] == 1.0) {if (guess[2] > guess[0] && guess[2] > guess[1]) ++correct;}
         else {printf("Logic error.\n"); exit(1);}
     }
+    auto end = std::chrono::system_clock::now();
 
     printf("%d/%d correct (%0.1f%%).\n", correct, samples, (double)correct / samples * 100.0);
-
-
 
     genann_free(ann);
     free(input);
     free(_class);
 
-    return 0;
+std::cout << std::endl << "Time elapsed: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" <<  std::endl;
+
+return 0;
 }

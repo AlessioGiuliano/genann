@@ -111,7 +111,7 @@ void genann_train(genann const *ann, double const *inputs, double const *desired
 /* Saves the ann. */
 void genann_write(genann const *ann, FILE *out);
 
-double genann_act_sigmoid(const genann *ann, double a);
+double genann_act_sigmoid(double a);
 double genann_act_sigmoid_cached(const genann *ann, double a);
 double genann_act_threshold(const genann *ann, double a);
 double genann_act_linear(const genann *ann, double a);
