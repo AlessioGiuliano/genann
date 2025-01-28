@@ -276,7 +276,6 @@ void set_hidden_deltas(const genann* ann)
 {
     /* Set hidden layer deltas, start on last layer and work backwards. */
     /* Note that loop is skipped in the case of hidden_layers == 0. */
-// #pragma omp parallel for num_threads(NUM_THREADS)
     for (int h = ann->hidden_layers - 1; h >= 0; --h) {
 
         /* Find first output and delta in this layer. */
@@ -284,27 +283,37 @@ void set_hidden_deltas(const genann* ann)
         double *d = ann->delta + (h * ann->hidden);
 
         /* Find first delta in following layer (which may be hidden or output). */
-        // FIXME On ne peut pas faire la boucle externe en paralelle parce qu'on
-        // utilise le layer suivant ici.
         double const * const dd = ann->delta + ((h+1) * ann->hidden);
 
         /* Find first weight in following layer (which may be hidden or output). */
         double const * const ww = ann->weight + ((ann->inputs+1) * ann->hidden) + ((ann->hidden+1) * ann->hidden * (h));
 
-        for (int j = 0; j < ann->hidden; ++j) {
+#pragma omp parallel firstprivate(d, o)
+        {
 
-            double delta = 0;
+            // Offset pointers so that each thread uses a different index
+            d += omp_get_thread_num();
+            o += omp_get_thread_num();
+            const int num_threads = omp_get_num_threads();
 
-            for (int k = 0; k < (h == ann->hidden_layers-1 ? ann->outputs : ann->hidden); ++k)
-            {
-                const double forward_delta = dd[k];
-                const int windex = k * (ann->hidden + 1) + (j + 1);
-                const double forward_weight = ww[windex];
-                delta += forward_delta * forward_weight;
+            #pragma omp for schedule(static)
+            for (int j = 0; j < ann->hidden; ++j) {
+
+                double delta = 0;
+
+                for (int k = 0; k < (h == ann->hidden_layers-1 ? ann->outputs : ann->hidden); ++k)
+                {
+                    const double forward_delta = dd[k];
+                    const int windex = k * (ann->hidden + 1) + (j + 1);
+                    const double forward_weight = ww[windex];
+                    delta += forward_delta * forward_weight;
+                }
+
+                *d = *o * (1.0-*o) * delta;
+                // Use a num_threads stride
+                d += num_threads;
+                o += num_threads;
             }
-
-            *d = *o * (1.0-*o) * delta;
-            ++d; ++o;
         }
     }
 }
