@@ -85,13 +85,13 @@ int main(int argc, char *argv[])
 
     auto start = std::chrono::system_clock::now();
     /* 4 inputs.
-     * 1 hidden layer(s) of 4 neurons.
+     * 50 hidden layer(s) of 200 neurons.
      * 3 outputs (1 per class)
      */
-    genann *ann = genann_init(4, 50, 200, 3);
+    genann *ann = genann_init(4, 50, 400, 3);
 
     int i, j;
-    int loops = 10;
+    int loops = 2;
 
     /* Train the network with backpropagation. */
     printf("Training for %d loops over data.\n", loops);

@@ -6,6 +6,21 @@ We have chosen the *genann* library. It is a small C library for creating and tr
 
 It should be noted that we spent a lot of time looking for an application that was not written in Python, did not result in too many errors during compilation, and was not too hard to understand.
 
+### Modifications
+
+In order to properly test our accelerations, we modified the example 4, which
+is an executable which was present in the original code. This app trains a network
+on the iris dataset, and then runs the model.
+
+We decided to add some hidden layers and neurons in order to make the speedup
+more significant, otherwise the default was 1 hidden layer with 4 neurons.
+We increased this to 50 layers of 400 neurons, and reduced the amount of iterations
+in order to make the run time quicker.
+
+In addition to what is described above, we switched the language from C to C++
+because we had trouble compiling the CUDA code. Finally, we added a timer
+to measure the training time.
+
 ## Stage 2 – Analysing application bottlenecks
 
 > What is the execution time of the application?
@@ -33,15 +48,21 @@ We plan to accelerate for loops used in training, provided there are no data dep
 
 > What is theoretically the performance that you could and would like to achieve?
 
-TODO : améliorer et compléter
+The whole application can not be parallelized, and the parallelizable parts consist
+of only about half of the execution time of the execution time. On this percentage of execution time,
+we can theoretically hope to achieve a speed-up corresponding to the amount of threads on the machine.
 
-The whole application can not be parallelized, and the parallelizable parts consist of only TODO % of the execution time. On this percentage of execution time, we can hope to achieve a speed-up of TODO %. The speed-up rate depends on TODO.
+In practice, the speed-up rate depends on many factors including thread affinity.
 
 ## Stage 3 – Acceleration
 
 > How do you plan to accelerate different parts of your application?
 
-We will use CUDA for a part of the `genann_init()` function and OpenMP for a part of the `train_hidden()` function.
+We will use CUDA for a part of the `genann_init()` function and OpenMP for a part of the `train_hidden()` and `set_hidden_deltas` functions.
+
+The `genann_init` is not really a bottleneck, but it was a good candidate for CUDA
+acceleration. We did this mainly for the exercice than anything, as we did not
+find some more performance crirical parts that could be improved with CUDA.
 
 > Which libraries are you going to use for GPU acceleration?
 
@@ -51,31 +72,52 @@ We will not use any library for GPU acceleration because we only use GPU for ini
 
 > How big is the data?
 
-TODO
+The data used inside the accelearted sections is relatively small, but this
+depends on the size of the network.
 
 > Where is it?
 
-TODO
+This data is stored in RAM and is heap allocated.
 
 > What is the expected data locality?
 
-TODO
+We expect a high data locality considering the whole network is allocated at once
+with malloc.
 
 > TODO : description of work provided -> 2 dossiers separes pour app de base et app acceleree
+
+To accelerate the neural network training, we first added OpenMP parallel for loops
+in the `set_hidden_deltas` and `train_hidden`.
+
+These were not very straighforward to write because we could not blindly parallelize
+the external loops over the hidden layers. Instead, we had to take into account
+that layers depended on previously computed layers which means that we
+had to parallelize the loops over neurons instead. This implied to properly
+calculate the pointer offsets for each thread / each iteration.
+
+In addition to this, we added a CUDA accelerated version of the `genann_init_sigmoid_lookup`
+function even though this function is only called once per neural network.
+Since this function is only a pretty simple loop, the CUDA kernel was quite easy
+to write.
 
 ## Stage 4 – Analysis of results
 
 > What is the performance enhancement achieved?
 
-TODO
+Unfortunately, the run time of the application seems to be extremely inconsistent
+for some reason:
+
+![inconsistencies](./inconsistencies.png)
+
+These inconsistencies also happen with the unmodified app.
+This means that we cannot really properly compare the performance between
+these apps.
 
 > Where does it come from and why?
 
 TODO
 
 > What is the new bottleneck created?
-
-TODO : compléter
 
 When using the GPU, a certain amount of time is needed to transfer data between the CPU and the GPU, and there are still unparallelized portions due to data dependency.
 
@@ -85,4 +127,5 @@ TODO
 
 > Now that you see the results, should you have done something different?
 
-TODO
+We would probably have chosen another application because this one does not fit
+this lab very well (even though it already took us a very long time to pick).

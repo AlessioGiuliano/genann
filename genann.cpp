@@ -300,7 +300,7 @@ void set_hidden_deltas(const genann* ann)
             o += omp_get_thread_num();
             const int num_threads = omp_get_num_threads();
 
-            #pragma omp for schedule(static)
+            #pragma omp for schedule(static) nowait
             for (int j = 0; j < ann->hidden; ++j) {
 
                 double delta = 0;
@@ -375,7 +375,7 @@ void train_hidden(const genann* ann, double learning_rate)
             d += omp_get_thread_num();
 
 
-            #pragma omp for schedule(static)
+            #pragma omp for schedule(static) nowait
             for (int j = 0; j < ann->hidden; ++j) {
                 *w++ += *d * learning_rate * -1.0;
                 for (int k = 1; k < (h == 0 ? ann->inputs : ann->hidden) + 1; ++k) {
