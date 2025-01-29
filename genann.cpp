@@ -349,14 +349,12 @@ void train_output(const genann* ann, double learning_rate)
 void train_hidden(const genann* ann, double learning_rate)
 {
     /* Train the hidden layers. */
-// #pragma omp parallel for  num_threads(NUM_THREADS)
     for (int h = ann->hidden_layers - 1; h >= 0; --h)
     {
         /* Find first delta in this layer. */
         double const *d = ann->delta + (h * ann->hidden);
 
         /* Find first input to this layer. */
-        // FIXME On utilise le layer precedent ici aussi
         double const *i = ann->output + (h
                 ? (ann->inputs + ann->hidden * (h-1))
                 : 0);
@@ -366,12 +364,22 @@ void train_hidden(const genann* ann, double learning_rate)
                 ? ((ann->inputs+1) * ann->hidden + (ann->hidden+1) * (ann->hidden) * (h-1))
                 : 0);
 
-        for (int j = 0; j < ann->hidden; ++j) {
-            *w++ += *d * learning_rate * -1.0;
-            for (int k = 1; k < (h == 0 ? ann->inputs : ann->hidden) + 1; ++k) {
-                *w++ += *d * learning_rate * i[k-1];
+        #pragma omp parallel firstprivate(d, w) num_threads(NUM_THREADS)
+        {
+            auto it_per_thread = ((h == 0 ? ann->inputs : ann->hidden) + 1);
+            w += omp_get_thread_num() * it_per_thread;
+            d += omp_get_thread_num();
+
+
+            #pragma omp for schedule(static)
+            for (int j = 0; j < ann->hidden; ++j) {
+                *w++ += *d * learning_rate * -1.0;
+                for (int k = 1; k < (h == 0 ? ann->inputs : ann->hidden) + 1; ++k) {
+                    *w++ += *d * learning_rate * i[k-1];
+                }
+                d += omp_get_num_threads();
+                w += (omp_get_num_threads() - 1) * it_per_thread;
             }
-            ++d;
         }
     }
 }

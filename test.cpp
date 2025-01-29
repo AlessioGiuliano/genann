@@ -66,7 +66,7 @@ void basic() {
 }
 
 
-void xor() {
+void _xor() {
     genann *ann = genann_init(2, 1, 2, 1);
     ann->activation_hidden = genann_act_threshold;
     ann->activation_output = genann_act_threshold;
@@ -248,7 +248,7 @@ void sigmoid() {
     const double d = .0001;
 
     while (i < max) {
-        lfequal(genann_act_sigmoid(NULL, i), genann_act_sigmoid_cached(NULL, i));
+        lfequal(genann_act_sigmoid(i), genann_act_sigmoid_cached(NULL, i));
         i += d;
     }
 }
@@ -261,7 +261,7 @@ int main(int argc, char *argv[])
     srand(100); //Repeatable test results.
 
     lrun("basic", basic);
-    lrun("xor", xor);
+    lrun("xor", _xor);
     lrun("backprop", backprop);
     lrun("train and", train_and);
     lrun("train or", train_or);

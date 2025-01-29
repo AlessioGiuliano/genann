@@ -4,7 +4,7 @@ LXXFLAGS = -std=c++17
 LDLIBS = -lm -fopenmp -L ${CUDA_PATH}lib64 -lcuda -lcudart -lstdc++
 
 # Default target
-all: main_fast main_slow
+all: main_fast main_slow test
 
 # Compile object files
 genann_cu.o: genann.cu
@@ -26,6 +26,9 @@ main_fast: example4.o genann_fast.o genann_cu.o
 # Build main_slow without accelerated definition
 main_slow: example4.o genann.o genann_cu.o
 	$(CXX) $(CXXFLAGS) example4.o genann.o genann_cu.o -o main_slow $(LDLIBS)
+
+test: test.o genann.o genann_cu.o
+	$(CXX) $(CXXFLAGS) test.o genann_fast.o genann_cu.o -o test $(LDLIBS)
 
 # Clean up build files
 clean:

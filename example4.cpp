@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
     genann *ann = genann_init(4, 100, 100, 3);
 
     int i, j;
-    int loops = 10;
+    int loops = 20;
 
     /* Train the network with backpropagation. */
     printf("Training for %d loops over data.\n", loops);
