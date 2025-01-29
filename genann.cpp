@@ -288,7 +288,7 @@ void set_hidden_deltas(const genann* ann)
         /* Find first weight in following layer (which may be hidden or output). */
         double const * const ww = ann->weight + ((ann->inputs+1) * ann->hidden) + ((ann->hidden+1) * ann->hidden * (h));
 
-#pragma omp parallel firstprivate(d, o)
+#pragma omp parallel firstprivate(d, o) num_threads(NUM_THREADS)
         {
 
             // Offset pointers so that each thread uses a different index
