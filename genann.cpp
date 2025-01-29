@@ -138,7 +138,12 @@ genann *genann_init(int inputs, int hidden_layers, int hidden, int outputs) {
     ret->activation_hidden = genann_act_sigmoid_cached;
     ret->activation_output = genann_act_sigmoid_cached;
 
+#ifdef fast
+
+    genann_init_sigmoid_lookup_cuda();
+#else
     genann_init_sigmoid_lookup();
+#endif
 
     return ret;
 }
