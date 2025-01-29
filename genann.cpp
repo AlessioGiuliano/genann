@@ -26,8 +26,8 @@
 #include "genann.h"
 #include <ostream>
 
-#ifdef FAST
 #include "genann_cu.h"
+#ifdef FAST
 #define NUM_THREADS omp_get_max_threads()
 #else
 #define NUM_THREADS 1
@@ -138,9 +138,8 @@ genann *genann_init(int inputs, int hidden_layers, int hidden, int outputs) {
     ret->activation_hidden = genann_act_sigmoid_cached;
     ret->activation_output = genann_act_sigmoid_cached;
 
-#ifdef fast
-
-    genann_init_sigmoid_lookup_cuda();
+#ifdef FAST
+    interval = genann_init_sigmoid_lookup_cuda(lookup);
 #else
     genann_init_sigmoid_lookup();
 #endif

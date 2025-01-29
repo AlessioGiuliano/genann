@@ -2,7 +2,6 @@
 #include <iostream>
 
 #include "genann.h"
-#include "genann_cu.h"
 #include <cuda_runtime.h>
 
 
@@ -32,7 +31,7 @@ __global__ void genann_act_sigmoid_kernel(double* lookup, double f)
         }                                                                                                              \
     } while (0)
 
-double genann_init_sigmoid_lookup(double* lookup) {
+double genann_init_sigmoid_lookup_cuda(double* lookup) {
         const double f = (sigmoid_dom_max - sigmoid_dom_min) / LOOKUP_SIZE;
 
         double* d_lookup;

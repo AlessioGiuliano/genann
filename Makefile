@@ -16,18 +16,18 @@ example4.o: example4.cpp
 genann.o: genann.cpp
 	$(CXX) $(CXXFLAGS) -c genann.cpp -o genann.o
 
-genann_fast.o: genann.cpp
-	$(CXX) $(CXXFLAGS) -c genann.cpp -o genann_fast.o -DFAST
+genann_fast.o: genann.cpp genann_cu.o
+	$(CXX) $(CXXFLAGS) -c genann.cpp genann_cu.o -o genann_fast.o -DFAST
 
 # Build main_fast with accelerated definition
-main_fast: example4.o genann_fast.o genann_cu.o
+main_fast: example4.o genann_fast.o
 	$(CXX) $(CXXFLAGS) example4.o genann_fast.o genann_cu.o -o main_fast $(LDLIBS)
 
 # Build main_slow without accelerated definition
-main_slow: example4.o genann.o genann_cu.o
+main_slow: example4.o genann.o
 	$(CXX) $(CXXFLAGS) example4.o genann.o genann_cu.o -o main_slow $(LDLIBS)
 
-test: test.o genann.o genann_cu.o
+test: test.o genann_fast.o
 	$(CXX) $(CXXFLAGS) test.o genann_fast.o genann_cu.o -o test $(LDLIBS)
 
 # Clean up build files
