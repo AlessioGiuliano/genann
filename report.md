@@ -49,7 +49,7 @@ We plan to accelerate for loops used in training, provided there are no data dep
 > What is theoretically the performance that you could and would like to achieve?
 
 The whole application can not be parallelized, and the parallelizable parts consist
-of only about half of the execution time of the execution time. On this percentage of execution time,
+of only about half of the execution time. On this percentage of execution time,
 we can theoretically hope to achieve a speed-up corresponding to the amount of threads on the machine.
 
 In practice, the speed-up rate depends on many factors including thread affinity.
@@ -62,7 +62,7 @@ We will use CUDA for a part of the `genann_init()` function and OpenMP for a par
 
 The `genann_init` is not really a bottleneck, but it was a good candidate for CUDA
 acceleration. We did this mainly for the exercice than anything, as we did not
-find some more performance crirical parts that could be improved with CUDA.
+find some more performance critical parts that could be improved with CUDA.
 
 > Which libraries are you going to use for GPU acceleration?
 
@@ -72,7 +72,7 @@ We will not use any library for GPU acceleration because we only use GPU for ini
 
 > How big is the data?
 
-The data used inside the accelearted sections is relatively small, but this
+The data used inside the accelerated sections is relatively small, but this
 depends on the size of the network.
 
 > Where is it?
@@ -84,7 +84,9 @@ This data is stored in RAM and is heap allocated.
 We expect a high data locality considering the whole network is allocated at once
 with malloc.
 
-> TODO : description of work provided -> 2 dossiers separes pour app de base et app acceleree
+### Description of work provided
+
+TODO : 2 dossiers separes pour app de base et app acceleree
 
 To accelerate the neural network training, we first added OpenMP parallel for loops
 in the `set_hidden_deltas` and `train_hidden`.
@@ -107,7 +109,7 @@ to write.
 Unfortunately, the run time of the application seems to be extremely inconsistent
 for some reason:
 
-![inconsistencies](./inconsistencies.png)
+![inconsistencies](./inconsistencies.png) TODO : ajouter image dans repo
 
 These inconsistencies also happen with the unmodified app.
 This means that we cannot really properly compare the performance between
