@@ -84,10 +84,12 @@ int main(int argc, char *argv[])
      * 1 hidden layer(s) of 4 neurons.
      * 3 outputs (1 per class)
      */
-    genann *ann = genann_init(4, 1, 4, 3);
+    genann *ann = genann_init(4, 50, 400, 3);
 
     int i, j;
-    int loops = 5000;
+    int loops = 2;
+
+    clock_t begin = clock();
 
     /* Train the network with backpropagation. */
     printf("Training for %d loops over data.\n", loops);
@@ -109,7 +111,9 @@ int main(int argc, char *argv[])
 
     printf("%d/%d correct (%0.1f%%).\n", correct, samples, (double)correct / samples * 100.0);
 
-
+    clock_t end = clock();
+    double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+    printf("\nTime elapsed: %fs\n", time_spent);
 
     genann_free(ann);
     free(input);
