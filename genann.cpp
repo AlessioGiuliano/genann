@@ -294,11 +294,11 @@ void set_hidden_deltas(const genann* ann)
 
 #pragma omp parallel firstprivate(d, o) num_threads(NUM_THREADS)
         {
-
             // Offset pointers so that each thread uses a different index
-            d += omp_get_thread_num();
-            o += omp_get_thread_num();
             const int num_threads = omp_get_num_threads();
+            const int it_per_thread = (num_threads / ann->hidden);
+            d += omp_get_thread_num() * it_per_thread;
+            o += omp_get_thread_num() * it_per_thread;
 
             #pragma omp for schedule(static) nowait
             for (int j = 0; j < ann->hidden; ++j) {
@@ -315,8 +315,8 @@ void set_hidden_deltas(const genann* ann)
 
                 *d = *o * (1.0-*o) * delta;
                 // Use a num_threads stride
-                d += num_threads;
-                o += num_threads;
+                d++;
+                o++;
             }
         }
     }
@@ -370,9 +370,10 @@ void train_hidden(const genann* ann, double learning_rate)
 
         #pragma omp parallel firstprivate(d, w) num_threads(NUM_THREADS)
         {
-            auto it_per_thread = ((h == 0 ? ann->inputs : ann->hidden) + 1);
-            w += omp_get_thread_num() * it_per_thread;
-            d += omp_get_thread_num();
+            auto it_per_thread = ann->hidden / omp_get_num_threads();
+            auto nested_iterations = ((h == 0 ? ann->inputs : ann->hidden) + 1);
+            w += omp_get_thread_num() * it_per_thread * nested_iterations;
+            d += omp_get_thread_num() * it_per_thread;
 
 
             #pragma omp for schedule(static) nowait
@@ -381,8 +382,7 @@ void train_hidden(const genann* ann, double learning_rate)
                 for (int k = 1; k < (h == 0 ? ann->inputs : ann->hidden) + 1; ++k) {
                     *w++ += *d * learning_rate * i[k-1];
                 }
-                d += omp_get_num_threads();
-                w += (omp_get_num_threads() - 1) * it_per_thread;
+                ++d;
             }
         }
     }

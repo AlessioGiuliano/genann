@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -fopenmp -std=c++17 -Wall -Wshadow -O1 -g -march=native
+CXXFLAGS = -fopenmp -std=c++17 -Wall -Wshadow -O3 -g -march=native
 LXXFLAGS = -std=c++17
 LDLIBS = -lm -fopenmp -L ${CUDA_PATH}lib64 -lcuda -lcudart -lstdc++
 
