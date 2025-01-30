@@ -274,6 +274,97 @@ double const *genann_run(genann const *ann, double const *inputs) {
     return ret;
 }
 
+void set_hidden_deltas(const genann* ann)
+{
+    /* Set hidden layer deltas, start on last layer and work backwards. */
+    /* Note that loop is skipped in the case of hidden_layers == 0. */
+    for (int h = ann->hidden_layers - 1; h >= 0; --h) {
+
+        /* Find first output and delta in this layer. */
+        double const *o = ann->output + ann->inputs + (h * ann->hidden);
+        double *d = ann->delta + (h * ann->hidden);
+
+        /* Find first delta in following layer (which may be hidden or output). */
+        double const * const dd = ann->delta + ((h+1) * ann->hidden);
+
+        /* Find first weight in following layer (which may be hidden or output). */
+        double const * const ww = ann->weight + ((ann->inputs+1) * ann->hidden) + ((ann->hidden+1) * ann->hidden * (h));
+
+        for (int j = 0; j < ann->hidden; ++j) {
+
+            double delta = 0;
+
+            for (int k = 0; k < (h == ann->hidden_layers-1 ? ann->outputs : ann->hidden); ++k) {
+                const double forward_delta = dd[k];
+                const int windex = k * (ann->hidden + 1) + (j + 1);
+                const double forward_weight = ww[windex];
+                delta += forward_delta * forward_weight;
+            }
+
+            *d = *o * (1.0-*o) * delta;
+            ++d; ++o;
+        }
+    }
+}
+
+void train_output(const genann* ann, double learning_rate)
+{
+    /* Find first output delta. */
+    double const *d = ann->delta + ann->hidden * ann->hidden_layers; /* First output delta. */
+
+    /* Find first weight to first output delta. */
+    double *w = ann->weight + (ann->hidden_layers
+        ? ((ann->inputs+1) * ann->hidden + (ann->hidden+1) * ann->hidden * (ann->hidden_layers-1))
+        : (0));
+
+    /* Find first output in previous layer. */
+    double const * const i = ann->output + (ann->hidden_layers
+        ? (ann->inputs + (ann->hidden) * (ann->hidden_layers-1))
+        : 0);
+
+    /* Set output layer weights. */
+    for (int j = 0; j < ann->outputs; ++j) {
+        *w++ += *d * learning_rate * -1.0;
+        for (int k = 1; k < (ann->hidden_layers ? ann->hidden : ann->inputs) + 1; ++k) {
+            *w++ += *d * learning_rate * i[k-1];
+        }
+
+        ++d;
+    }
+
+    assert(w - ann->weight == ann->total_weights);
+}
+
+
+void train_hidden(const genann* ann, double learning_rate)
+{
+    /* Train the hidden layers. */
+    for (int h = ann->hidden_layers - 1; h >= 0; --h) {
+
+        /* Find first delta in this layer. */
+        double const *d = ann->delta + (h * ann->hidden);
+
+        /* Find first input to this layer. */
+        double const *i = ann->output + (h
+                ? (ann->inputs + ann->hidden * (h-1))
+                : 0);
+
+        /* Find first weight to this layer. */
+        double *w = ann->weight + (h
+                ? ((ann->inputs+1) * ann->hidden + (ann->hidden+1) * (ann->hidden) * (h-1))
+                : 0);
+
+
+        for (int j = 0; j < ann->hidden; ++j) {
+            *w++ += *d * learning_rate * -1.0;
+            for (int k = 1; k < (h == 0 ? ann->inputs : ann->hidden) + 1; ++k) {
+                *w++ += *d * learning_rate * i[k-1];
+            }
+            ++d;
+        }
+
+    }
+}
 
 void genann_train(genann const *ann, double const *inputs, double const *desired_outputs, double learning_rate) {
     /* To begin with, we must run the network forward. */
@@ -302,94 +393,11 @@ void genann_train(genann const *ann, double const *inputs, double const *desired
         }
     }
 
+    set_hidden_deltas(ann);
 
-    /* Set hidden layer deltas, start on last layer and work backwards. */
-    /* Note that loop is skipped in the case of hidden_layers == 0. */
-    for (h = ann->hidden_layers - 1; h >= 0; --h) {
+    train_output(ann, learning_rate);
 
-        /* Find first output and delta in this layer. */
-        double const *o = ann->output + ann->inputs + (h * ann->hidden);
-        double *d = ann->delta + (h * ann->hidden);
-
-        /* Find first delta in following layer (which may be hidden or output). */
-        double const * const dd = ann->delta + ((h+1) * ann->hidden);
-
-        /* Find first weight in following layer (which may be hidden or output). */
-        double const * const ww = ann->weight + ((ann->inputs+1) * ann->hidden) + ((ann->hidden+1) * ann->hidden * (h));
-
-        for (j = 0; j < ann->hidden; ++j) {
-
-            double delta = 0;
-
-            for (k = 0; k < (h == ann->hidden_layers-1 ? ann->outputs : ann->hidden); ++k) {
-                const double forward_delta = dd[k];
-                const int windex = k * (ann->hidden + 1) + (j + 1);
-                const double forward_weight = ww[windex];
-                delta += forward_delta * forward_weight;
-            }
-
-            *d = *o * (1.0-*o) * delta;
-            ++d; ++o;
-        }
-    }
-
-
-    /* Train the outputs. */
-    {
-        /* Find first output delta. */
-        double const *d = ann->delta + ann->hidden * ann->hidden_layers; /* First output delta. */
-
-        /* Find first weight to first output delta. */
-        double *w = ann->weight + (ann->hidden_layers
-                ? ((ann->inputs+1) * ann->hidden + (ann->hidden+1) * ann->hidden * (ann->hidden_layers-1))
-                : (0));
-
-        /* Find first output in previous layer. */
-        double const * const i = ann->output + (ann->hidden_layers
-                ? (ann->inputs + (ann->hidden) * (ann->hidden_layers-1))
-                : 0);
-
-        /* Set output layer weights. */
-        for (j = 0; j < ann->outputs; ++j) {
-            *w++ += *d * learning_rate * -1.0;
-            for (k = 1; k < (ann->hidden_layers ? ann->hidden : ann->inputs) + 1; ++k) {
-                *w++ += *d * learning_rate * i[k-1];
-            }
-
-            ++d;
-        }
-
-        assert(w - ann->weight == ann->total_weights);
-    }
-
-
-    /* Train the hidden layers. */
-    for (h = ann->hidden_layers - 1; h >= 0; --h) {
-
-        /* Find first delta in this layer. */
-        double const *d = ann->delta + (h * ann->hidden);
-
-        /* Find first input to this layer. */
-        double const *i = ann->output + (h
-                ? (ann->inputs + ann->hidden * (h-1))
-                : 0);
-
-        /* Find first weight to this layer. */
-        double *w = ann->weight + (h
-                ? ((ann->inputs+1) * ann->hidden + (ann->hidden+1) * (ann->hidden) * (h-1))
-                : 0);
-
-
-        for (j = 0; j < ann->hidden; ++j) {
-            *w++ += *d * learning_rate * -1.0;
-            for (k = 1; k < (h == 0 ? ann->inputs : ann->hidden) + 1; ++k) {
-                *w++ += *d * learning_rate * i[k-1];
-            }
-            ++d;
-        }
-
-    }
-
+    train_hidden(ann, learning_rate);
 }
 
 
