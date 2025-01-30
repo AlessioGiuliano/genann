@@ -17,6 +17,9 @@ more significant, otherwise the default was 1 hidden layer with 4 neurons.
 We increased this to 50 layers of 400 neurons, and reduced the amount of iterations
 in order to make the run time quicker.
 
+This completely broke the efficiency of the network, but this is not what we
+are interested in for this lab.
+
 In addition to what is described above, we switched the language from C to C++
 because we had trouble compiling the CUDA code. Finally, we added a timer
 to measure the training time.
@@ -25,7 +28,7 @@ to measure the training time.
 
 > What is the execution time of the application?
 
-TODO
+The original application's run time is about 5.5 seconds.
 
 > What is the complexity of the application (constant O(1), linear O(n), other?)?
 
@@ -40,7 +43,7 @@ the training part of the application, more specifically the two functions
 The `genann_run` is also quite heavy, but we will focus on speeding up the
 training in this lab.
 
-![hotspots](./slow_perf.png)
+![hotspots](./original_perf.png)
 
 > Which parts of the application do you plan to accelerate and why?
 
@@ -86,8 +89,6 @@ with malloc.
 
 ### Description of work provided
 
-TODO : 2 dossiers separes pour app de base et app acceleree
-
 To accelerate the neural network training, we first added OpenMP parallel for loops
 in the `set_hidden_deltas` and `train_hidden`.
 
@@ -109,25 +110,44 @@ to write.
 Unfortunately, the run time of the application seems to be extremely inconsistent
 for some reason:
 
-![inconsistencies](./inconsistencies.png) TODO : ajouter image dans repo
+![inconsistencies](./inconsistencies.png)
 
-These inconsistencies also happen with the unmodified app.
-This means that we cannot really properly compare the performance between
-these apps.
+Despite these inconsistencies, we could observe a speedup during some runs
+as shown below. The run time was about 3.2 seconds, which represents a speedup
+of 5.5 / 3.2 = 1.7x.
+This is quite a bit lower than the (very generous) estimation we did above.
+
+![fast time](./fast_perf_time.png)
 
 > Where does it come from and why?
 
-TODO
+The acceleration mostly comes from the loops parallelized with OpenMP. Regarding
+the CUDA part, the overhead of using the GPU probably negates the potential
+speedup that could be achieved.
 
 > What is the new bottleneck created?
 
 When using the GPU, a certain amount of time is needed to transfer data between the CPU and the GPU, and there are still unparallelized portions due to data dependency.
 
+Using the perf profiling tool, we were able to measure the amount of CPU cycles
+spend in each functions. This does not show an improvement with the use of OpenMP
+because the speedup comes from the parallelization, which also introduces more instructions.
+This means that the bottlenecks are looking even worse with this analysis.
+
+Finally, we could mention that the running of the network is still taking a significant
+portion of the execution time.
+
+![fast perf](./fast_perf.png)
+
 > Seeing the acceleration results, what other things should you accelerate?
 
-TODO
+As mentionned above, the running of the network could still be accelerated but there are no really other parts
+that could be significantly improved without making major changes to the code.
+
+One idea would be to use the cuDNN CUDA lbirary in order to have access to
+already accelerated primitives.
 
 > Now that you see the results, should you have done something different?
 
-We would probably have chosen another application because this one does not fit
+We would probably have chosen another application because this one does not seem to fit
 this lab very well (even though it already took us a very long time to pick).
