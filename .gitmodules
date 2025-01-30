@@ -1,0 +1,6 @@
+[submodule "genann"]
+	path = genann
+	url = git@github.com:codeplea/genann.git
+[submodule "original_repo"]
+	path = original_repo
+	url = git@github.com:codeplea/genann.git
